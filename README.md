@@ -12,11 +12,16 @@ Full-stack assignment implementation using Next.js, Django REST Framework, Postg
 - Django admin model registrations for users, sessions, and bookings.
 - Dockerized 4-service setup: frontend, backend, db, reverse proxy.
 
-## One-Command Startup
-1. Copy environment file:
-   - `cp .env.example .env`
-2. Start services:
-   - `docker-compose up --build`
+## Setup Steps (One-Command Startup)
+1. **Clone the Repository**:
+   - `git clone https://github.com/samayrm1004-netizen/samays-ai-solutions.git`
+   - `cd samays-ai-solutions`
+2. **Environment Variables**:
+   - Copy the sample variables: `cp .env.example .env`
+   - Populate the `.env` OAuth keys if you wish to use Google Login.
+3. **Docker Commands**:
+   - Execute exactly: `docker-compose up --build`
+   - The orchestrator will automatically construct Nginx, Postgres, Django, and Next.js and securely map them together natively!
 
 ## Access URLs
 - App (Nginx): `http://localhost:9881`
@@ -47,13 +52,8 @@ Full-stack assignment implementation using Next.js, Django REST Framework, Postg
    - `GOOGLE_OAUTH2_CLIENT_SECRET`
 3. Use the login page token exchange flow.
 
-## Suggested Demo Flow
-1. Open `http://localhost:9881`.
-2. Sign in from `/login`:
-   - Quick path: demo login as `user` or `creator`.
-   - OAuth path: provide Google ID token.
-3. Browse catalog and open a session detail page.
-4. Book a session (user flow).
-5. Open `/dashboard`:
-   - User sees active/past bookings and editable profile.
-   - Creator can create sessions and view booking overview.
+## Example Demo Flow
+1. Access the Next.js Frontend via Nginx: `http://localhost:9881`.
+2. **Login**: Navigate to `/login` and authenticate using the Quick Demo Admin block, or seamlessly log in via Google OAuth.
+3. **Create session**: Open the `/dashboard`, click the Creator Hub tab, define the pricing / description for a new AI asset, and publish your session logic directly to Postgres.
+4. **Book session**: Navigate back to the Catalog (`/`), click on the deep details of any product, and execute the Booking modal form to reserve the session instantly. Wait exactly 60 seconds of inactivity to watch the session visually timeout natively!

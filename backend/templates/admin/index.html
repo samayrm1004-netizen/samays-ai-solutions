@@ -1,0 +1,165 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block extrastyle %}
+{{ block.super }}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+    .dashboard-stats {
+        display: flex;
+        gap: 2rem;
+        margin-bottom: 2rem;
+    }
+
+    .stat-card {
+        background: #fff;
+        padding: 1.5rem;
+        border-radius: 8px;
+        flex: 1;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        border-left: 4px solid #417690;
+    }
+
+    .stat-card h3 {
+        margin: 0;
+        font-size: 14px;
+        text-transform: uppercase;
+        color: #666;
+    }
+
+    .stat-card .value {
+        font-size: 32px;
+        font-weight: bold;
+        color: #417690;
+        margin-top: 10px;
+    }
+
+    .chart-container {
+        background: #fff;
+        padding: 1.5rem;
+        border-radius: 8px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        margin-bottom: 2rem;
+    }
+
+    .recent-bookings {
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+    }
+
+    .recent-bookings h2 {
+        padding: 15px;
+        margin: 0;
+        background: #f8f8f8;
+        border-bottom: 1px solid #eee;
+        font-size: 16px;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    th,
+    td {
+        padding: 12px 15px;
+        text-align: left;
+        border-bottom: 1px solid #eee;
+    }
+
+    th {
+        color: #666;
+        text-transform: uppercase;
+        font-size: 12px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="content-main">
+
+    <div class="dashboard-stats">
+        <div class="stat-card">
+            <h3>Total Registered Users</h3>
+            <div class="value" id="user-total">...</div>
+        </div>
+        <div class="stat-card">
+            <h3>Active Bookings</h3>
+            <div class="value" id="booking-total">...</div>
+        </div>
+    </div>
+
+    <div class="chart-container">
+        <h2 style="margin-top:0;">User Registration Metrics</h2>
+        <canvas id="userChart" width="400" height="100"></canvas>
+    </div>
+
+    <div class="recent-bookings">
+        <h2>Recent Bookings</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Customer Name</th>
+                    <th>Email</th>
+                    <th>Product</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody id="bookings-table">
+                <tr>
+                    <td colspan="4">Loading...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', async () => {
+        try {
+            const resp = await fetch('/api/users/chart-data/');
+            const data = await resp.json();
+
+            const ctx = document.getElementById('userChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: data.chart_labels,
+                    datasets: [{
+                        label: 'Registered Users (Aggregated in Postgres)',
+                        data: data.chart_data,
+                        backgroundColor: '#417690'
+                    }]
+                },
+                options: { responsive: true }
+            });
+
+            document.getElementById('user-total').innerText = data.total_users;
+            document.getElementById('booking-total').innerText = data.active_bookings;
+
+            let tableHtml = '';
+            if (data.recent_bookings.length === 0) {
+                tableHtml = '<tr><td colspan="4">No bookings yet.</td></tr>';
+            } else {
+                data.recent_bookings.forEach(b => {
+                    let color = b.status === "confirmed" ? "green" : "orange";
+                    tableHtml += `
+                    <tr>
+                        <td>${b.booking_name || '-'}</td>
+                        <td>${b.booking_email || '-'}</td>
+                        <td>${b.product__name}</td>
+                        <td><strong style="color:${color};">${b.status.toUpperCase()}</strong></td>
+                    </tr>
+                `;
+                });
+            }
+            document.getElementById('bookings-table').innerHTML = tableHtml;
+        } catch (e) {
+            console.error("Dashboard failed to load Postgres data natively:", e);
+            document.getElementById('bookings-table').innerHTML = `<tr><td colspan="4">Error Loading Analytics. Are you logged out remotely?</td></tr>`;
+        }
+    });
+</script>
+{% endblock %}

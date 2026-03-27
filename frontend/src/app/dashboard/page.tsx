@@ -2,8 +2,8 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { createProduct, getBookings, getProducts, getProfile, updateProfile, getWishlist, getAdminStats } from '@/lib/api';
 import { clearAuth, getStoredTokens } from '@/lib/auth';
+import { createProduct, updateProduct, deleteProduct, getBookings, getProducts, getProfile, updateProfile, getWishlist, getAdminStats } from '@/lib/api';
 import type { Booking, Product, User } from '@/lib/types';
 
 type SessionForm = {
@@ -31,6 +31,7 @@ export default function Dashboard() {
   const [feedback, setFeedback] = useState('');
   const [error, setError] = useState('');
   const [sessionForm, setSessionForm] = useState<SessionForm>(emptyForm);
+  const [editingProductId, setEditingProductId] = useState<string | number | null>(null);
 
   const [profileForm, setProfileForm] = useState({
     first_name: '',
@@ -118,7 +119,7 @@ export default function Dashboard() {
     }
   };
 
-  const handleCreateSession = async (e: React.FormEvent) => {
+  const handleCreateOrUpdateSession = async (e: React.FormEvent) => {
     e.preventDefault();
     const parsedPrice = Number(sessionForm.price);
     if (Number.isNaN(parsedPrice) || parsedPrice < 0) {
@@ -131,19 +132,55 @@ export default function Dashboard() {
     setFeedback('');
 
     try {
-      const created = await createProduct({
-        name: sessionForm.name,
-        description: sessionForm.description,
-        price: parsedPrice,
-        image_url: sessionForm.image_url || undefined,
-      });
-      setCreatorSessions((prev) => [created, ...prev]);
+      if (editingProductId) {
+        const updated = await updateProduct(editingProductId, {
+          name: sessionForm.name,
+          description: sessionForm.description,
+          price: parsedPrice,
+          image_url: sessionForm.image_url || undefined,
+        });
+        setCreatorSessions((prev) => prev.map(p => p.id === editingProductId ? updated : p));
+        setFeedback('Session updated successfully.');
+      } else {
+        const created = await createProduct({
+          name: sessionForm.name,
+          description: sessionForm.description,
+          price: parsedPrice,
+          image_url: sessionForm.image_url || undefined,
+        });
+        setCreatorSessions((prev) => [created, ...prev]);
+        setFeedback('Session created successfully.');
+      }
       setSessionForm(emptyForm);
-      setFeedback('Session created successfully.');
+      setEditingProductId(null);
     } catch {
-      setError('Could not create session. Ensure you are logged in as creator.');
+      setError('Could not save session. Ensure you are logged in as creator.');
     } finally {
       setCreatingSession(false);
+    }
+  };
+
+  const handleEditClick = (session: Product) => {
+    setEditingProductId(session.id);
+    setSessionForm({
+      name: session.name,
+      description: session.description,
+      price: session.price.toString(),
+      image_url: session.image_url || '',
+    });
+    setFeedback('');
+    setError('');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleDeleteClick = async (id: string | number) => {
+    if (!confirm('Are you absolutely certain you wish to delete this AI Session?')) return;
+    try {
+      await deleteProduct(id);
+      setCreatorSessions((prev) => prev.filter(p => p.id !== id));
+      setFeedback('Session deleted successfully.');
+    } catch {
+      setError('Failed to delete session.');
     }
   };
 
@@ -309,14 +346,21 @@ export default function Dashboard() {
 
         {activeTab === 'creator' && user.is_creator && (
           <div className="glass-card">
-            <h3>Manage Creator Products</h3>
-            <form className="form-grid" onSubmit={handleCreateSession} style={{ marginBottom: '3rem' }}>
+            <h3>{editingProductId ? 'Update Creator Product' : 'Publish New Product'}</h3>
+            <form className="form-grid" onSubmit={handleCreateOrUpdateSession} style={{ marginBottom: '3rem' }}>
               <input value={sessionForm.name} onChange={(e) => setSessionForm((prev) => ({ ...prev, name: e.target.value }))} placeholder="Product title" required />
               <input value={sessionForm.price} onChange={(e) => setSessionForm((prev) => ({ ...prev, price: e.target.value }))} placeholder="Price" required />
               <textarea value={sessionForm.description} onChange={(e) => setSessionForm((prev) => ({ ...prev, description: e.target.value }))} placeholder="Product description" rows={4} required />
-              <button className="btn-primary" type="submit" disabled={creatingSession}>
-                {creatingSession ? 'Creating...' : 'Create Product'}
-              </button>
+              <div style={{ display: 'flex', gap: '1rem' }}>
+                <button className="btn-primary" type="submit" disabled={creatingSession} style={{ flex: 1 }}>
+                  {creatingSession ? 'Saving...' : editingProductId ? 'Update Product' : 'Create Product'}
+                </button>
+                {editingProductId && (
+                  <button type="button" onClick={() => { setEditingProductId(null); setSessionForm(emptyForm); }} className="btn-secondary" style={{ padding: '0.8rem 1.5rem', flexShrink: 0 }}>
+                    Cancel
+                  </button>
+                )}
+              </div>
             </form>
 
             <h4>Your Published Products</h4>
@@ -325,7 +369,11 @@ export default function Dashboard() {
                 <article key={session.id} className="product-card" style={{ background: 'var(--surface-color)', padding: '2rem', borderRadius: '12px' }}>
                   <h4 style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>{session.name}</h4>
                   <p className="muted" style={{ marginBottom: '1rem' }}>{session.description}</p>
-                  <strong>${session.price}</strong>
+                  <strong style={{ display: 'block', marginBottom: '1.5rem', color: 'var(--accent)' }}>${session.price}</strong>
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <button onClick={() => handleEditClick(session)} className="btn-secondary" style={{ flex: 1, padding: '0.5rem' }}>Edit Object</button>
+                    <button onClick={() => handleDeleteClick(session.id)} className="btn-secondary" style={{ background: 'rgba(239, 68, 68, 0.1)', color: 'var(--danger)', flex: 1, padding: '0.5rem' }}>Delete</button>
+                  </div>
                 </article>
               ))}
             </div>

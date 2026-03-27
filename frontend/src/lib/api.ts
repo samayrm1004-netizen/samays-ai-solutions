@@ -4,7 +4,7 @@ import type { Booking, Product, Tokens, User } from "./types";
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
 
 type RequestOptions = {
-  method?: "GET" | "POST" | "PATCH";
+  method?: "GET" | "POST" | "PATCH" | "DELETE";
   body?: unknown;
   auth?: boolean;
 };
@@ -99,8 +99,24 @@ export async function getProfile() {
   return request<User>("/users/profile/");
 }
 
-export async function updateProfile(payload: Partial<User>) {
-  return request<User>("/users/profile/", { method: "PATCH", body: payload });
+export async function createProduct(data: Partial<Product>) {
+  return request<Product>('/products/', {
+    method: 'POST',
+    body: data,
+  });
+}
+
+export async function updateProduct(id: string | number, data: Partial<Product>) {
+  return request<Product>(`/products/${id}/`, {
+    method: 'PATCH',
+    body: data,
+  });
+}
+
+export async function deleteProduct(id: string | number) {
+  return request<void>(`/products/${id}/`, {
+    method: 'DELETE',
+  });
 }
 
 export async function getProducts() {
@@ -111,13 +127,8 @@ export async function getProduct(id: string | number) {
   return request<Product>(`/products/${id}/`, { auth: false });
 }
 
-export async function createProduct(payload: {
-  name: string;
-  description: string;
-  price: number;
-  image_url?: string;
-}) {
-  return request<Product>("/products/", { method: "POST", body: payload });
+export async function updateProfile(payload: Partial<User>) {
+  return request<User>("/users/profile/", { method: "PATCH", body: payload });
 }
 
 export async function getBookings() {

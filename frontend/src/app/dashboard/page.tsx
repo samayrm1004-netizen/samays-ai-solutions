@@ -67,9 +67,11 @@ export default function Dashboard() {
           avatar: profile.avatar || '',
         });
 
-        if (profile.is_creator && !profile.is_staff) {
+        if (profile.is_creator || profile.is_staff) {
           const products = await getProducts();
-          const ownSessions = products.filter((product) => product.creator.id === profile.id);
+          const ownSessions = profile.is_staff
+            ? products
+            : products.filter((product) => product.creator.id === profile.id);
           setCreatorSessions(ownSessions);
         }
 
@@ -221,7 +223,7 @@ export default function Dashboard() {
           >
             Wishlist
           </button>
-          {user.is_creator && !user.is_staff && (
+          {(user.is_creator || user.is_staff) && (
             <button
               onClick={() => setActiveTab('creator')}
               style={{ textAlign: 'left', padding: '1rem', background: activeTab === 'creator' ? 'var(--accent)' : 'transparent', color: activeTab === 'creator' ? '#fff' : 'var(--text-primary)', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '1.1rem', fontWeight: 500 }}
@@ -344,7 +346,7 @@ export default function Dashboard() {
           </div>
         )}
 
-        {activeTab === 'creator' && user.is_creator && (
+        {activeTab === 'creator' && (user.is_creator || user.is_staff) && (
           <div className="glass-card">
             <h3>{editingProductId ? 'Update Creator Product' : 'Publish New Product'}</h3>
             <form className="form-grid" onSubmit={handleCreateOrUpdateSession} style={{ marginBottom: '3rem' }}>
